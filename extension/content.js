@@ -361,3 +361,121 @@ chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
     console.error("[MOC Downloader] 处理消息失败:", e);
   }
 });
+
+/**
+ * 注入内联样式用于页面工具栏
+ * @returns {void}
+ */
+function injectToolbarStyle() {
+  try {
+    if (document.getElementById("moc-downloader-style")) return;
+    const style = document.createElement("style");
+    style.id = "moc-downloader-style";
+    style.textContent = `
+      .moc-downloader-toolbar {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        z-index: 2147483647;
+        background: rgba(0,0,0,0.65);
+        backdrop-filter: saturate(120%) blur(2px);
+        color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        padding: 10px;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft YaHei", sans-serif;
+      }
+      .moc-downloader-toolbar h2 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .moc-downloader-toolbar button {
+        display: block;
+        width: 180px;
+        margin: 6px 0;
+        padding: 8px 10px;
+        font-size: 13px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #111;
+        background: #ffd54f;
+      }
+      .moc-downloader-toolbar button:hover {
+        background: #ffca28;
+      }
+      .moc-downloader-toolbar .row {
+        display: flex;
+        gap: 8px;
+      }
+      .moc-downloader-toolbar .row button {
+        width: auto;
+        flex: 1;
+      }
+      @media (max-width: 480px) {
+        .moc-downloader-toolbar {
+          right: 8px;
+          bottom: 8px;
+        }
+        .moc-downloader-toolbar button {
+          width: 160px;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  } catch (e) {}
+}
+
+/**
+ * 在页面右下角注入下载工具栏
+ * - 包含三个按钮：下载图片、下载附件、全部下载
+ * - 点击后直接调用现有的 requestDownload
+ * @returns {void}
+ */
+function ensureInlineToolbar() {
+  try {
+    if (document.getElementById("moc-downloader-toolbar")) return;
+    injectToolbarStyle();
+    const bar = document.createElement("div");
+    bar.className = "moc-downloader-toolbar";
+    bar.id = "moc-downloader-toolbar";
+    const title = document.createElement("h2");
+    title.textContent = "MOC 下载器";
+    const btnImages = document.createElement("button");
+    btnImages.type = "button";
+    btnImages.textContent = "下载当前页图片";
+    const btnFiles = document.createElement("button");
+    btnFiles.type = "button";
+    btnFiles.textContent = "下载当前页附件";
+    const btnAll = document.createElement("button");
+    btnAll.type = "button";
+    btnAll.textContent = "全部下载";
+    btnImages.addEventListener("click", () => requestDownload("images"));
+    btnFiles.addEventListener("click", () => requestDownload("attachments"));
+    btnAll.addEventListener("click", () => requestDownload("all"));
+    bar.appendChild(title);
+    bar.appendChild(btnImages);
+    bar.appendChild(btnFiles);
+    bar.appendChild(btnAll);
+    document.body.appendChild(bar);
+  } catch (e) {}
+}
+
+/**
+ * 初始化页面下载按钮工具栏
+ * @returns {void}
+ */
+function initInlineToolbar() {
+  try {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", ensureInlineToolbar, {
+        once: true,
+      });
+    } else {
+      ensureInlineToolbar();
+    }
+  } catch (e) {}
+}
+
+initInlineToolbar();
