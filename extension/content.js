@@ -100,9 +100,47 @@ function collectImageUrls() {
   } catch (e) {
     console.error("[MOC Downloader] 收集轮播图片失败:", e);
   }
+  // 回退：若无轮播图，则尝试提取主图
+  if (urls.size === 0) {
+    const heroUrls = collectHeroImageUrls();
+    heroUrls.forEach((u) => urls.add(u));
+    console.log("[MOC Downloader] 主图区域图片数量:", heroUrls.length);
+  }
   return Array.from(urls);
 }
 
+/**
+ * 采集主展示图（非轮播页面）
+ * - 按 MOC-ID 过滤：匹配 alt 中的 "MOC-<id>" 或路径包含 "moc-<id>"
+ * - 优先 data-src，其次 src
+ * - 仅保存图片链接，移除查询串
+ * @returns {string[]} 图片 URL 列表
+ */
+function collectHeroImageUrls() {
+  const out = new Set();
+  try {
+    const mocId = getMocIdFromLocation();
+    const imgs = document.querySelectorAll("img");
+    imgs.forEach((img) => {
+      const alt = (img.getAttribute("alt") || "").toLowerCase();
+      const raw = img.getAttribute("data-src") || img.getAttribute("src") || "";
+      const cleaned = cleanUrlLike(raw);
+      if (!cleaned) return;
+      const path = cleaned.split("?")[0].toLowerCase();
+      const hasMocInAlt = mocId ? alt.includes(`moc-${mocId}`) : false;
+      const hasMocInPath = mocId
+        ? path.includes(`/mocs/moc-${mocId}/`) ||
+          path.includes(`/thumbs/mocs/moc-${mocId}/`)
+        : path.includes("/mocs/");
+      if ((hasMocInAlt || hasMocInPath) && isImageUrl(cleaned)) {
+        out.add(toAbsoluteUrl(cleaned.split("?")[0]));
+      }
+    });
+  } catch (e) {
+    console.error("[MOC Downloader] 收集主图失败:", e);
+  }
+  return Array.from(out);
+}
 /**
  * 从“购买文件区域”收集附件 URL（仅限 /mocs/purchases/download/ 链接）
  * - 作用域限制在包含下载列表的容器（div.pb-30）
