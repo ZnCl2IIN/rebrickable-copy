@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Rebrickable MOC Downloader",
+  "version": "0.1.0",
+  "description": "下载 Rebrickable MOC 页面中的图片与附件，并按 MOC编号_名称 命名。",
+  "permissions": ["downloads", "activeTab", "scripting", "storage"],
+  "host_permissions": [
+    "https://rebrickable.com/*",
+    "https://*.rebrickable.com/*"
+  ],
+  "action": {
+    "default_title": "MOC Downloader",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://rebrickable.com/mocs/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
