@@ -485,49 +485,103 @@ function injectToolbarStyle() {
         right: 16px;
         bottom: 16px;
         z-index: 2147483647;
-        background: rgba(0,0,0,0.65);
-        backdrop-filter: saturate(120%) blur(2px);
-        color: #fff;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-        padding: 10px;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Microsoft YaHei", sans-serif;
+        width: 260px;
+        background: var(--bs-body-bg, #ffffff);
+        color: var(--bs-body-color, #212529);
+        border: 1px solid var(--bs-border-color, rgba(0,0,0,0.12));
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        overflow: hidden;
+        font-family: inherit;
       }
-      .moc-downloader-toolbar h2 {
-        margin: 0 0 8px;
-        font-size: 13px;
-        font-weight: 600;
-      }
-      .moc-downloader-toolbar button {
-        display: block;
-        width: 180px;
-        margin: 6px 0;
-        padding: 8px 10px;
-        font-size: 13px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        color: #111;
-        background: #ffd54f;
-      }
-      .moc-downloader-toolbar button:hover {
-        background: #ffca28;
-      }
-      .moc-downloader-toolbar .row {
+      .moc-downloader-toolbar * { box-sizing: border-box; }
+      .moc-downloader-toolbar .moc-downloader-header {
         display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        background: var(--bs-tertiary-bg, #f8f9fa);
+        border-bottom: 1px solid var(--bs-border-color, rgba(0,0,0,0.12));
+      }
+      .moc-downloader-toolbar .moc-downloader-title {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .2px;
+      }
+      .moc-downloader-toolbar .moc-downloader-actions {
+        display: flex;
+        gap: 6px;
+      }
+      .moc-downloader-toolbar .moc-downloader-iconbtn {
+        height: 28px;
+        width: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        border: 1px solid var(--bs-border-color, rgba(0,0,0,0.12));
+        background: var(--bs-body-bg, #ffffff);
+        color: inherit;
+        cursor: pointer;
+        line-height: 1;
+        padding: 0;
+      }
+      .moc-downloader-toolbar .moc-downloader-iconbtn:hover {
+        background: rgba(0,0,0,0.04);
+      }
+      .moc-downloader-toolbar .moc-downloader-body {
+        padding: 10px 12px 12px;
+      }
+      .moc-downloader-toolbar .moc-downloader-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
-      .moc-downloader-toolbar .row button {
+      .moc-downloader-toolbar .moc-downloader-btn {
+        width: 100%;
+        padding: 9px 10px;
+        font-size: 13px;
+        border-radius: 10px;
+        border: 1px solid var(--bs-border-color, rgba(0,0,0,0.12));
+        cursor: pointer;
+        background: var(--bs-body-bg, #ffffff);
+        color: inherit;
+      }
+      .moc-downloader-toolbar .moc-downloader-btn:hover {
+        background: rgba(0,0,0,0.04);
+      }
+      .moc-downloader-toolbar .moc-downloader-btn-primary {
+        background: var(--bs-primary, #0d6efd);
+        border-color: var(--bs-primary, #0d6efd);
+        color: #fff;
+      }
+      .moc-downloader-toolbar .moc-downloader-btn-primary:hover {
+        filter: brightness(0.96);
+      }
+      .moc-downloader-toolbar .moc-downloader-btn-wide {
+        margin-top: 8px;
+        width: 100%;
+      }
+      .moc-downloader-toolbar .moc-downloader-meta {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--bs-secondary-color, #6c757d);
+        line-height: 1.2;
+      }
+      .moc-downloader-toolbar.moc-downloader-collapsed .moc-downloader-body {
+        display: none;
+      }
+      .moc-downloader-toolbar.moc-downloader-collapsed {
         width: auto;
-        flex: 1;
       }
       @media (max-width: 480px) {
         .moc-downloader-toolbar {
           right: 8px;
           bottom: 8px;
         }
-        .moc-downloader-toolbar button {
-          width: 160px;
+        .moc-downloader-toolbar {
+          width: 230px;
         }
       }
     `;
@@ -548,29 +602,76 @@ function ensureInlineToolbar() {
     const bar = document.createElement("div");
     bar.className = "moc-downloader-toolbar";
     bar.id = "moc-downloader-toolbar";
-    const title = document.createElement("h2");
+    const header = document.createElement("div");
+    header.className = "moc-downloader-header";
+    const title = document.createElement("div");
+    title.className = "moc-downloader-title";
     title.textContent = "MOC 下载器";
+    const actions = document.createElement("div");
+    actions.className = "moc-downloader-actions";
+    const btnCollapse = document.createElement("button");
+    btnCollapse.type = "button";
+    btnCollapse.className = "moc-downloader-iconbtn";
+    btnCollapse.setAttribute("aria-label", "折叠");
+    btnCollapse.textContent = "–";
+    const btnClose = document.createElement("button");
+    btnClose.type = "button";
+    btnClose.className = "moc-downloader-iconbtn";
+    btnClose.setAttribute("aria-label", "关闭");
+    btnClose.textContent = "×";
+    actions.appendChild(btnCollapse);
+    actions.appendChild(btnClose);
+    header.appendChild(title);
+    header.appendChild(actions);
+
+    const body = document.createElement("div");
+    body.className = "moc-downloader-body";
+    const grid = document.createElement("div");
+    grid.className = "moc-downloader-grid";
+
     const btnImages = document.createElement("button");
     btnImages.type = "button";
-    btnImages.textContent = "下载当前页图片";
+    btnImages.className = "moc-downloader-btn";
+    btnImages.textContent = "下载图片";
     const btnFiles = document.createElement("button");
     btnFiles.type = "button";
-    btnFiles.textContent = "下载当前页附件";
+    btnFiles.className = "moc-downloader-btn";
+    btnFiles.textContent = "下载附件";
     const btnAll = document.createElement("button");
     btnAll.type = "button";
+    btnAll.className =
+      "moc-downloader-btn moc-downloader-btn-primary moc-downloader-btn-wide";
     btnAll.textContent = "全部下载";
     const btnQuick = document.createElement("button");
     btnQuick.type = "button";
+    btnQuick.className = "moc-downloader-btn moc-downloader-btn-wide";
     btnQuick.textContent = "一键下载（首图+io/pdf）";
+
+    grid.appendChild(btnImages);
+    grid.appendChild(btnFiles);
+    body.appendChild(grid);
+    body.appendChild(btnAll);
+    body.appendChild(btnQuick);
+
+    const meta = document.createElement("div");
+    meta.className = "moc-downloader-meta";
+    meta.textContent = "文件命名：MOC-编号_名称_序号/文件名";
+    body.appendChild(meta);
+
     btnImages.addEventListener("click", () => requestDownload("images"));
     btnFiles.addEventListener("click", () => requestDownload("attachments"));
     btnAll.addEventListener("click", () => requestDownload("all"));
     btnQuick.addEventListener("click", () => requestQuickDownload());
-    bar.appendChild(title);
-    bar.appendChild(btnImages);
-    bar.appendChild(btnFiles);
-    bar.appendChild(btnAll);
-    bar.appendChild(btnQuick);
+    btnCollapse.addEventListener("click", () => {
+      const collapsed = bar.classList.toggle("moc-downloader-collapsed");
+      btnCollapse.textContent = collapsed ? "+" : "–";
+    });
+    btnClose.addEventListener("click", () => {
+      bar.remove();
+    });
+
+    bar.appendChild(header);
+    bar.appendChild(body);
     document.body.appendChild(bar);
   } catch (e) {}
 }
