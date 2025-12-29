@@ -353,6 +353,108 @@ function requestDownload(type) {
   );
 }
 
+/**
+ * 采集“展示图”的首图 URL
+ * - 优先取轮播图中首个非 clone 的 li
+ * - 无轮播则回退取主图
+ * @returns {string} 首图 URL，若不存在则返回空字符串
+ */
+function collectFirstShowcaseImageUrl() {
+  try {
+    const firstSlideImg = document.querySelector(
+      "ul.slides li:not(.clone) img"
+    );
+    if (firstSlideImg) {
+      const raw =
+        firstSlideImg.getAttribute("data-src") ||
+        firstSlideImg.getAttribute("src") ||
+        "";
+      const cleaned = cleanUrlLike(raw);
+      if (cleaned && isImageUrl(cleaned)) {
+        return toAbsoluteUrl(cleaned.split("?")[0]);
+      }
+    }
+  } catch (e) {
+    console.error("[MOC Downloader] 解析轮播首图失败:", e);
+  }
+  try {
+    const heroUrls = collectHeroImageUrls();
+    return heroUrls[0] || "";
+  } catch (e) {
+    console.error("[MOC Downloader] 解析主图失败:", e);
+    return "";
+  }
+}
+
+/**
+ * 获取附件扩展名
+ * - 优先从文本（title/文件名）获取，其次从 URL 获取
+ * @param {{url:string,text:string}} att
+ * @returns {string} 小写扩展名（不含点），无则返回空字符串
+ */
+function getAttachmentExt(att) {
+  try {
+    const extFromText = getUrlExt(att?.text || "");
+    const extFromUrl = getUrlExt(att?.url || "");
+    return (extFromText || extFromUrl || "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * 一键下载：仅下载展示图首图 + 附件中的 io/pdf
+ * @returns {void}
+ */
+function requestQuickDownload() {
+  const mocId = getMocIdFromLocation();
+  const mocTitle = getMocTitleFromDocument();
+
+  const firstImageUrl = collectFirstShowcaseImageUrl();
+  const imageItems = firstImageUrl
+    ? [
+        {
+          url: firstImageUrl,
+          filename: buildImageFilename(mocId, mocTitle, 1, firstImageUrl),
+        },
+      ]
+    : [];
+
+  const allowed = new Set(["io", "pdf"]);
+  const rawAttachments = collectAttachmentUrls();
+  const filteredAttachments = rawAttachments.filter((a) =>
+    allowed.has(getAttachmentExt(a))
+  );
+  const attachItems = filteredAttachments.map(({ url, text }) => ({
+    url,
+    filename: buildAttachmentFilename(mocId, mocTitle, text, url),
+  }));
+
+  const payload = imageItems.concat(attachItems);
+  console.log("[MOC Downloader] 一键下载汇总:", {
+    images: imageItems.length,
+    attachments: attachItems.length,
+  });
+
+  if (payload.length === 0) {
+    console.warn("[MOC Downloader] 一键下载未找到可下载资源");
+    return;
+  }
+  chrome.runtime.sendMessage(
+    { kind: "downloadItems", items: payload },
+    (resp) => {
+      if (chrome.runtime.lastError) {
+        console.error(
+          "[MOC Downloader] 一键下载请求失败:",
+          chrome.runtime.lastError
+        );
+        return;
+      }
+      console.log("[MOC Downloader] 一键下载后台响应:", resp);
+    }
+  );
+}
+
 // 接收弹窗指令
 chrome.runtime.onMessage.addListener((msg, _sender, _sendResponse) => {
   try {
@@ -457,13 +559,18 @@ function ensureInlineToolbar() {
     const btnAll = document.createElement("button");
     btnAll.type = "button";
     btnAll.textContent = "全部下载";
+    const btnQuick = document.createElement("button");
+    btnQuick.type = "button";
+    btnQuick.textContent = "一键下载（首图+io/pdf）";
     btnImages.addEventListener("click", () => requestDownload("images"));
     btnFiles.addEventListener("click", () => requestDownload("attachments"));
     btnAll.addEventListener("click", () => requestDownload("all"));
+    btnQuick.addEventListener("click", () => requestQuickDownload());
     bar.appendChild(title);
     bar.appendChild(btnImages);
     bar.appendChild(btnFiles);
     bar.appendChild(btnAll);
+    bar.appendChild(btnQuick);
     document.body.appendChild(bar);
   } catch (e) {}
 }
