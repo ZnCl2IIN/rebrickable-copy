@@ -280,9 +280,15 @@ function buildImageFilename(mocId, mocTitle, index, url) {
  * @returns {string}
  */
 function buildAttachmentFilename(mocId, mocTitle, linkText, url) {
-  const ext = getUrlExt(url) || "bin";
-  const hint =
-    sanitizeName(linkText || "").replace(/\s+/g, "-") || "attachment";
+  const extFromText = getUrlExt(linkText || "");
+  const extFromUrl = getUrlExt(url || "");
+  const ext = extFromText || extFromUrl || "bin";
+  let hint = sanitizeName(linkText || "").replace(/\s+/g, "-") || "attachment";
+  // 若文本中包含扩展名，则移除末尾的 .<ext>，避免重复如 *.io.bin
+  if (extFromText) {
+    const re = new RegExp(`\\.${ext}$`, "i");
+    hint = hint.replace(re, "");
+  }
   const safeTitle = sanitizeName(mocTitle).replace(/\s+/g, "-");
   return `MOC-${mocId}_${safeTitle}_${hint}.${ext}`;
 }
